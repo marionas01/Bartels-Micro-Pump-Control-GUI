@@ -44,7 +44,7 @@ def serial_ports():
 
 
 def port_changed(new_port_str: str) -> serial.Serial:
-    if not new_port_str == "no port detected":
+    if not new_port_str == "no port detected" or new_port_str == "":
         return serial.Serial(port=str(new_port_str), baudrate=115200)
 
 

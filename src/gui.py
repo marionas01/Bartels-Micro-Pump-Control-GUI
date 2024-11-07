@@ -39,7 +39,8 @@ class MainWindow(QMainWindow):
         # General Setting
         self.settings_label: QLabel = QLabel("General Pump Settings:")
 
-        self.port_label: QLabel = QLabel("Port:")
+        self.port_button: QPushButton = QPushButton("Port: refresh")
+        self.port_button.clicked.connect(self.refresh_ports)
         self.port_combobox: QComboBox = QComboBox()
         self.port_combobox.addItems(self.ports)
         self.port_combobox.setCurrentText(self.ports[0])
@@ -57,7 +58,7 @@ class MainWindow(QMainWindow):
         self.stop_button.clicked.connect(self.stop_clicked)
 
         self.left_layout.addWidget(self.settings_label, 0, 0)
-        self.left_layout.addWidget(self.port_label, 1, 0)
+        self.left_layout.addWidget(self.port_button, 1, 0)
         self.left_layout.addWidget(self.port_combobox, 1, 1)
         self.left_layout.addWidget(self.voltage_label, 2, 0)
         self.left_layout.addWidget(self.voltage_spinbox, 2, 1)
@@ -110,8 +111,16 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
     #   Methods:
+    def refresh_ports(self):
+        self.ports = serial_ports()
+        [self.port_combobox.removeItem(i) for i in list(range(len(self.ports)))]
+        self.port_combobox.addItems(self.ports)
+        self.port_combobox.setCurrentText(self.ports[0])
+
     def change_port(self):
-        self.port = port_changed(self.port_combobox.currentText())
+        val = self.port_combobox.currentText()
+        if not val == "no port detected" or val == "":
+            self.port = port_changed(self.port_combobox.currentText())
 
     def start_clicked(self):
         start(self.port, self.voltage_spinbox.value())
