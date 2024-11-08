@@ -4,6 +4,7 @@ import glob
 import time
 import serial
 
+
 #  Data transition format
 # Mode : Amplitude
 #   1  :    250
@@ -68,17 +69,21 @@ def pulse(serial_port: serial.Serial, amplitude: int | float, injection_time: in
 
 def pulse_series(serial_port: serial.Serial, amplitude: int | float, injection_time: int | float, injection_number: int,
                  injection_distance: int | float) -> None:
-    for i in range(0, injection_number):
+    for _ in range(0, injection_number):
+        print(f"Injection {_} of {injection_number}:")
         pulse(serial_port=serial_port, amplitude=amplitude, injection_time=injection_time)
+        print(f"Pause for {injection_distance}[sec]")
         time.sleep(injection_distance)
 
 
 def test_start(arg: bool):
+    i = 1
     while arg is True:
-        print("Thread 1 started: going to sleep for 10 sec")
+        print("Thread 1 started: going to sleep for 1 sec")
         time.sleep(1)
-        print("Thread 1 completed:")
+        print(f"Thread 1 completed: {i} iteration")
+        i += 1
 
 
-def test_stop(arg: bool):
+def test_stop():
     return
