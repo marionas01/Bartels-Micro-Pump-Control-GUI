@@ -1,9 +1,9 @@
 ('D:\\PycharmProjects\\Bartels-Micro-Pump-Control-GUI\\src\\build\\gui\\Bartels '
  'Micro Pump Control.exe',
- True,
+ False,
  False,
  True,
- 'D:\\PycharmProjects\\Bartels-Micro-Pump-Control-GUI\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\images\\icon-console.ico',
+ 'D:\\PycharmProjects\\Bartels-Micro-Pump-Control-GUI\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\images\\icon-windowed.ico',
  None,
  False,
  False,
@@ -75,8 +75,8 @@
  [],
  False,
  False,
- 1731096214,
- [('run.exe',
-   'D:\\PycharmProjects\\Bartels-Micro-Pump-Control-GUI\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\run.exe',
+ 1731096705,
+ [('runw.exe',
+   'D:\\PycharmProjects\\Bartels-Micro-Pump-Control-GUI\\.venv\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')],
  'C:\\Users\\dragi\\AppData\\Local\\Programs\\Python\\Python312\\python312.dll')
