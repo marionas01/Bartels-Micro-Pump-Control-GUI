@@ -1,6 +1,5 @@
 #   Imports:
 import os
-import sys
 
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -8,6 +7,7 @@ from PyQt5.QtWidgets import *
 from pyqtgraph import *
 
 from src.functions import *
+from src.classes import *
 
 #   set git path reader
 basedir = os.path.dirname(__file__)
@@ -19,7 +19,7 @@ class MainWindow(QMainWindow):
     def __init__(self, available_ports) -> None:
         super().__init__()
 
-        # MainWindow settings
+        #   MainWindow settings:
         self.setWindowIcon(QIcon(os.path.join(basedir, "icons", "equalizer.png")))  # Icon for application
         self.setWindowTitle("Bartels Micro Pump Control GUI")
         self.setGeometry(0, 0, 600, 400)  # only width and height have to adjusted, the next 4 rows centre the app
@@ -28,17 +28,22 @@ class MainWindow(QMainWindow):
         qt_rectangle.moveCenter(center_point)
         self.move(qt_rectangle.topLeft())
 
+        #   Ports:
         self.ports: list = available_ports
         if "no port detected" not in self.ports:
             self.port: serial.Serial | None = serial.Serial(port=str(self.ports[0]), baudrate=115200)
+        else:
+            self.port: serial.Serial | None = None
 
+        #   Threads:
+        self.current_thread: threading.Thread | None = None
+
+        #   Layouts:
         # Left Layout:
         self.left_widget: QWidget = QWidget()
         self.left_layout: QGridLayout = QGridLayout()
 
         # General Setting
-        self.settings_label: QLabel = QLabel("General Pump Settings:")
-
         self.port_button: QPushButton = QPushButton("Port: refresh")
         self.port_button.clicked.connect(self.refresh_ports)
         self.port_combobox: QComboBox = QComboBox()
@@ -57,13 +62,12 @@ class MainWindow(QMainWindow):
         self.stop_button: QPushButton = QPushButton("Stop")
         self.stop_button.clicked.connect(self.stop_clicked)
 
-        self.left_layout.addWidget(self.settings_label, 0, 0)
-        self.left_layout.addWidget(self.port_button, 1, 0)
-        self.left_layout.addWidget(self.port_combobox, 1, 1)
-        self.left_layout.addWidget(self.voltage_label, 2, 0)
-        self.left_layout.addWidget(self.voltage_spinbox, 2, 1)
-        self.left_layout.addWidget(self.start_button, 3, 0)
-        self.left_layout.addWidget(self.stop_button, 3, 1)
+        self.left_layout.addWidget(self.port_button, 0, 0)
+        self.left_layout.addWidget(self.port_combobox, 0, 1)
+        self.left_layout.addWidget(self.voltage_label, 1, 0)
+        self.left_layout.addWidget(self.voltage_spinbox, 1, 1)
+        self.left_layout.addWidget(self.start_button, 2, 0)
+        self.left_layout.addWidget(self.stop_button, 2, 1)
 
         # Impulse Settings
         self.impulse_setting_label: QLabel = QLabel("Impulse Settings:")
@@ -86,26 +90,33 @@ class MainWindow(QMainWindow):
         self.impulse_button: QPushButton = QPushButton("Impulse")
         self.impulse_button.clicked.connect(self.impulse_clicked)
 
-        self.left_layout.addWidget(self.impulse_setting_label, 4, 0)
-        self.left_layout.addWidget(self.injection_time_label, 5, 0)
-        self.left_layout.addWidget(self.injection_time_spinbox, 5, 1)
-        self.left_layout.addWidget(self.injection_number_label, 6, 0)
-        self.left_layout.addWidget(self.injection_number_spinbox, 6, 1)
-        self.left_layout.addWidget(self.injection_distance_label, 7, 0)
-        self.left_layout.addWidget(self.injection_distance_spinbox, 7, 1)
-        self.left_layout.addWidget(self.impulse_button, 8, 0)
+        self.test_start_button: QPushButton = QPushButton("Test Start")
+        self.test_start_button.clicked.connect(self.test_start_clicked)
+        self.test_stop_button: QPushButton = QPushButton("Test Stop")
+        self.test_stop_button.clicked.connect(self.test_stop_clicked)
+
+        self.left_layout.addWidget(self.impulse_setting_label, 3, 0)
+        self.left_layout.addWidget(self.injection_time_label, 4, 0)
+        self.left_layout.addWidget(self.injection_time_spinbox, 4, 1)
+        self.left_layout.addWidget(self.injection_number_label, 5, 0)
+        self.left_layout.addWidget(self.injection_number_spinbox, 5, 1)
+        self.left_layout.addWidget(self.injection_distance_label, 6, 0)
+        self.left_layout.addWidget(self.injection_distance_spinbox, 6, 1)
+        self.left_layout.addWidget(self.impulse_button, 7, 0)
+        self.left_layout.addWidget(self.test_start_button, 8, 0)
+        self.left_layout.addWidget(self.test_stop_button, 8, 1)
 
         self.left_widget.setLayout(self.left_layout)
 
-        # Right Layout:
+        # Right Layout
         self.right_widget: PlotWidget = PlotWidget()
         self.right_widget.setBackground('w')
 
-        # Main Layout:
+        # Main Layout
         self.main_widget: QWidget = QWidget()
         self.main_layout: QHBoxLayout = QHBoxLayout()
         self.main_layout.addWidget(self.left_widget, stretch=1)
-        self.main_layout.addWidget(self.right_widget, stretch=1)
+        self.main_layout.addWidget(self.right_widget, stretch=3)
 
         self.main_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.main_widget)
@@ -119,26 +130,46 @@ class MainWindow(QMainWindow):
 
     def change_port(self):
         val = self.port_combobox.currentText()
-        if not val == "no port detected" or val == "":
+        if val != "no port detected" and val != "":
             self.port = port_changed(self.port_combobox.currentText())
 
     def start_clicked(self):
-        start(self.port, self.voltage_spinbox.value())
+        if self.port:
+            if self.current_thread:
+                self.current_thread.kill()
+            self.current_thread = Thread(target=start(self.port, self.voltage_spinbox.value()),
+                                         args=[self.port, self.voltage_spinbox.value()])
 
     def stop_clicked(self):
-        stop(self.port)
+        if self.port:
+            if self.current_thread:
+                self.current_thread.kill()
+            stop(self.port)
 
     def impulse_clicked(self):
-        if self.injection_distance_spinbox.value() and self.injection_number_spinbox.value() != 0:
-            pulse_series(self.port,
-                         self.voltage_spinbox.value(),
-                         self.injection_time_spinbox.value(),
-                         self.injection_number_spinbox.value(),
-                         self.injection_distance_spinbox.value())
-        else:
-            pulse(self.port,
-                  self.voltage_spinbox.value(),
-                  self.injection_time_spinbox.value())
+        if self.port:
+            if self.current_thread:
+                self.current_thread.kill()
+            if self.injection_distance_spinbox.value() != 0 and self.injection_number_spinbox.value() != 0:
+                self.current_thread = Thread(target=pulse_series,
+                                             args=[self.port,
+                                                   self.voltage_spinbox.value(),
+                                                   self.injection_time_spinbox.value(),
+                                                   self.injection_number_spinbox.value(),
+                                                   self.injection_distance_spinbox.value()])
+
+            else:
+                self.current_thread = Thread(target=pulse,
+                                             args=[self.port,
+                                                   self.voltage_spinbox.value(),
+                                                   self.injection_time_spinbox.value()])
+
+    def test_start_clicked(self):
+        self.current_thread = Thread(target=test_start, args=[True])
+        self.current_thread.start()
+
+    def test_stop_clicked(self):
+        self.current_thread.kill()
 
 
 #   create Application obj

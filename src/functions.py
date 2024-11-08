@@ -44,26 +44,23 @@ def serial_ports():
 
 
 def port_changed(new_port_str: str) -> serial.Serial:
-    if not new_port_str == "no port detected" or new_port_str == "":
+    if new_port_str != "no port detected" and new_port_str != "":
         return serial.Serial(port=str(new_port_str), baudrate=115200)
 
 
 def start(serial_port: serial.Serial, amplitude: int | float) -> None:
-
     command = f"1:"+str(amplitude)+"\n"
     serial_port.write(command.encode())
     print("start command send:", command)
 
 
 def stop(serial_port: serial.Serial) -> None:
-
     command = "1:0\n"
     serial_port.write(command.encode())
     print("stop command send:", command)
 
 
 def pulse(serial_port: serial.Serial, amplitude: int | float, injection_time: int | float) -> None:
-
     start(serial_port=serial_port, amplitude=amplitude)
     time.sleep(injection_time)
     stop(serial_port=serial_port)
@@ -71,9 +68,17 @@ def pulse(serial_port: serial.Serial, amplitude: int | float, injection_time: in
 
 def pulse_series(serial_port: serial.Serial, amplitude: int | float, injection_time: int | float, injection_number: int,
                  injection_distance: int | float) -> None:
-
-    i: int = 0   # iterator
-    while i < injection_number:
-        i += 1
+    for i in range(0, injection_number):
         pulse(serial_port=serial_port, amplitude=amplitude, injection_time=injection_time)
         time.sleep(injection_distance)
+
+
+def test_start(arg: bool):
+    while arg is True:
+        print("Thread 1 started: going to sleep for 10 sec")
+        time.sleep(1)
+        print("Thread 1 completed:")
+
+
+def test_stop(arg: bool):
+    return
