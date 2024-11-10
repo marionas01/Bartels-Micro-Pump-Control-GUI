@@ -98,32 +98,51 @@ class MainWindow(QMainWindow):
 
         # # Threading Test Buttons
         # self.test_start_button: QPushButton = QPushButton("Test Start")
-        # self.test_start_button.clicked.connect(self.test_start_clicked)
+        # self.test_start_button.clicked.connect(self.thread_test_start_clicked)
         # self.test_stop_button: QPushButton = QPushButton("Test Stop")
-        # self.test_stop_button.clicked.connect(self.test_stop_clicked)
+        # self.test_stop_button.clicked.connect(self.thread_test_stop_clicked)
         #
         # self.left_layout.addWidget(self.test_start_button, 7, 0)
         # self.left_layout.addWidget(self.test_stop_button, 7, 1)
 
+        # # NI Test Buttons
+        self.test_start_button: QPushButton = QPushButton("Test Start")
+        self.test_start_button.clicked.connect(get_ni_system_channels)
+        self.test_stop_button: QPushButton = QPushButton("Test Stop")
+        self.test_stop_button.clicked.connect(get_ni_system_signal)
+        #
+        self.left_layout.addWidget(self.test_start_button, 7, 0)
+        self.left_layout.addWidget(self.test_stop_button, 7, 1)
+
         self.left_widget.setLayout(self.left_layout)
 
         # #   Right Layout:
-        # #self.right_widget: PlotWidget = PlotWidget()
-        # #self.right_widget.setBackground('w')
+        self.right_layout: QGridLayout = QGridLayout()
+        self.right_widget: QWidget = QWidget()
+
+        self.scope_ai: PlotWidget = PlotWidget()
+        self.scope_ai.setBackground('w')
+
+        self.scope_pump: PlotWidget = PlotWidget()
+        self.scope_pump.setBackground('w')
+
+        self.right_layout.addWidget(self.scope_ai, 0, 0)
+        self.right_layout.addWidget(self.scope_pump, 1, 0)
+        self.right_widget.setLayout(self.right_layout)
 
         #   Main Layout:
         self.main_widget: QWidget = QWidget()
         self.main_layout: QHBoxLayout = QHBoxLayout()
         self.main_layout.addWidget(self.left_widget, stretch=1)
-        #self.main_layout.addWidget(self.right_widget, stretch=3)
+        self.main_layout.addWidget(self.right_widget, stretch=3)
 
         self.main_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.main_widget)
 
     #   Methods:
     def set_window_size(self):
-        self.setGeometry(0, 0, 200, 250)
-        self.setMaximumSize(200, 250)
+        self.setGeometry(0, 0, 600, 300)
+        # self.setMaximumSize(200, 250)
 
     def refresh_ports(self):
         self.ports = serial_ports()
@@ -167,11 +186,11 @@ class MainWindow(QMainWindow):
                 self.current_thread = None
             stop(self.port)
 
-    def test_start_clicked(self):
+    def thread_test_start_clicked(self):
         self.current_thread = Thread(target=test_start, args=[True])
         self.current_thread.start()
 
-    def test_stop_clicked(self):
+    def thread_test_stop_clicked(self):
         if self.current_thread:
             print(f"Stop current thread: {self.current_thread}")
             self.current_thread.kill()

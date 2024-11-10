@@ -4,6 +4,11 @@ import glob
 import time
 import serial
 
+import nidaqmx
+import nidaqmx.system
+import nidaqmx.system.device
+import nidaqmx.system._collections.device_collection
+
 
 #  Data transition format
 # Mode : Amplitude
@@ -74,6 +79,25 @@ def pulse_series(serial_port: serial.Serial, amplitude: int | float, injection_t
         pulse(serial_port=serial_port, amplitude=amplitude, injection_time=injection_time)
         print(f"Pause for {injection_distance}[sec]")
         time.sleep(injection_distance)
+
+
+def get_ni_system_channels():
+    system = nidaqmx.system.System.local()
+    channels = system.global_channels
+    print(system)
+    print(channels)
+    for device in system.devices:
+        print(device)
+        print(system.devices)
+        print(type(system.devices))
+    return
+
+
+def get_ni_system_signal(device: str, physical_chanel: str):
+    with nidaqmx.Task() as task:
+        task.ai_channels.add_ai_voltage_chan(f"{device}/{physical_chanel}")
+        task.read()
+    return
 
 
 def test_start(arg: bool):
