@@ -17,7 +17,7 @@ basedir = os.path.dirname(__file__)
 #   MainWindow Class
 class MainWindow(QMainWindow):
 
-    def __init__(self, available_ports, available_ni_system) -> None:
+    def __init__(self) -> None:
         super().__init__()
 
         #   MainWindow settings:
@@ -29,17 +29,9 @@ class MainWindow(QMainWindow):
         qt_rectangle.moveCenter(center_point)
         self.move(qt_rectangle.topLeft())
 
-        #   Ports:
-        self.ports: list = available_ports
-        self.ni_system_devices: list = available_ni_system
-        if "no port detected" not in self.ports:
-            self.port: serial.Serial | None = serial.Serial(port=str(self.ports[0]), baudrate=115200)
-        else:
-            self.port: serial.Serial | None = None
-
-        #   Threads:
-        self.pump_thread: threading.Thread | None = None
-        self.ni_device_thread: concurrent.futures.ThreadPoolExecutor | None = None
+        #   Controller Constructor:
+        self.mpc = MicroPumpController()
+        self.ndc = NIDeviceController()
 
         #   Layouts:
         # Left Layout:
@@ -52,8 +44,8 @@ class MainWindow(QMainWindow):
                                                     self)
         self.port_button.clicked.connect(self.refresh_ports)
         self.port_combobox: QComboBox = QComboBox()
-        self.port_combobox.addItems(self.ports)
-        self.port_combobox.setCurrentText(self.ports[0])
+        self.port_combobox.addItems(self.mpc.available_ports)
+        self.port_combobox.setCurrentText(self.mpc.available_ports[0])
         self.port_combobox.currentTextChanged.connect(self.change_port)
 
         self.voltage_label: QLabel = QLabel("Pump Voltage [Volt]:")
@@ -93,10 +85,10 @@ class MainWindow(QMainWindow):
                                                          self)
         self.ni_device_button.clicked.connect(self.refresh_ni_system)
         self.ni_device_combobox: QComboBox = QComboBox()
-        self.ni_device_combobox.addItems(self.ni_system_devices)
+        self.ni_device_combobox.addItems(self.ndc.available_devices_str)
+        self.ni_device_combobox.setCurrentText(self.ndc.available_devices_str[0])
+        self.ni_device_combobox.currentTextChanged.connect(self.change_device)
 
-        self.ni_device_name_lineedit: QLineEdit = QLineEdit()
-        self.ni_device_name_lineedit.setPlaceholderText("Enter Device Name:")
         self.ni_device_channel_lineedit: QLineEdit = QLineEdit()
         self.ni_device_channel_lineedit.setPlaceholderText("Enter Channel Name:")
 
@@ -125,28 +117,24 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.stop_button, 5, 1)
         self.left_layout.addWidget(self.ni_device_button, 6, 0)
         self.left_layout.addWidget(self.ni_device_combobox, 6, 1)
-        self.left_layout.addWidget(self.ni_device_name_lineedit, 7, 1)
-        self.left_layout.addWidget(self.ni_device_channel_lineedit, 8, 1)
-        self.left_layout.addWidget(self.ni_device_start_button, 9, 0)
-        self.left_layout.addWidget(self.ni_device_stop_button, 9, 1)
+        self.left_layout.addWidget(self.ni_device_channel_lineedit, 7, 1)
+        self.left_layout.addWidget(self.ni_device_start_button, 8, 0)
+        self.left_layout.addWidget(self.ni_device_stop_button, 8, 1)
 
         # # Threading Test Buttons
         # self.test_start_button: QPushButton = QPushButton("Test Start")
         # self.test_start_button.clicked.connect(self.thread_test_start_clicked)
         # self.test_stop_button: QPushButton = QPushButton("Test Stop")
         # self.test_stop_button.clicked.connect(self.thread_test_stop_clicked)
-        #
-        # self.left_layout.addWidget(self.test_start_button, 7, 0)
-        # self.left_layout.addWidget(self.test_stop_button, 7, 1)
 
         # # NI Test Buttons
-        self.test_start_button: QPushButton = QPushButton("Test Start")
-        self.test_start_button.clicked.connect(get_ni_system_channels)
-        self.test_stop_button: QPushButton = QPushButton("Test Stop")
-        self.test_stop_button.clicked.connect(get_ni_system_signal)
-        #
-        self.left_layout.addWidget(self.test_start_button, 10, 0)
-        self.left_layout.addWidget(self.test_stop_button, 10, 1)
+        # self.test_start_button: QPushButton = QPushButton("Test Start")
+        # self.test_start_button.clicked.connect(get_ni_system_channels)
+        # self.test_stop_button: QPushButton = QPushButton("Test Stop")
+        # self.test_stop_button.clicked.connect(get_ni_system_signal)
+
+        # self.left_layout.addWidget(self.test_start_button, 10, 0)
+        # self.left_layout.addWidget(self.test_stop_button, 10, 1)
 
         self.left_widget.setLayout(self.left_layout)
 
@@ -174,56 +162,42 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
 
     #   Methods:
+    # MicroPump
     def set_window_size(self):
         self.setGeometry(0, 0, 600, 300)
         # self.setMaximumSize(200, 250)
 
     def refresh_ports(self):
-        [self.port_combobox.removeItem(i) for i in list(range(len(self.ports)))]
-        self.ports = serial_ports()
-        self.port_combobox.addItems(self.ports)
-        self.port_combobox.setCurrentText(self.ports[0])
+        [self.port_combobox.removeItem(i) for i in list(range(len(self.mpc.available_ports)))]
+        self.mpc.update_serial_ports()
+        self.port_combobox.addItems(self.mpc.available_ports)
+        self.port_combobox.setCurrentText(self.mpc.available_ports[0])
 
     def change_port(self):
         val = self.port_combobox.currentText()
         if val != "no port detected" and val != "":
-            self.port = port_changed(self.port_combobox.currentText())
+            self.mpc.change_port(val)
 
     def start_clicked(self):
-        if self.port:
-            if self.pump_thread:
-                print(f"Stop current thread: {self.pump_thread}")
-                self.pump_thread.kill()
-            if self.injection_time_spinbox.value() == 0:
-                self.pump_thread = Thread(target=start(self.port, self.voltage_spinbox.value()),
-                                          args=[self.port, self.voltage_spinbox.value()])
-            else:
-                if self.injection_distance_spinbox.value() != 0 and self.injection_number_spinbox.value() != 0:
-                    self.pump_thread = Thread(target=pulse_series,
-                                              args=[self.port,
-                                                    self.voltage_spinbox.value(),
-                                                    self.injection_time_spinbox.value(),
-                                                    self.injection_number_spinbox.value(),
-                                                    self.injection_distance_spinbox.value()])
-                else:
-                    self.pump_thread = Thread(target=pulse,
-                                              args=[self.port,
-                                                    self.voltage_spinbox.value(),
-                                                    self.injection_time_spinbox.value()])
+        self.mpc.threaded_start(amplitude=self.voltage_spinbox.value(),
+                                injection_time=self.injection_time_spinbox.value(),
+                                injection_number=self.injection_number_spinbox.value(),
+                                injection_distance=self.injection_distance_spinbox.value())
 
     def stop_clicked(self):
-        if self.port:
-            if self.pump_thread:
-                print(f"Stop current thread: {self.pump_thread}")
-                self.pump_thread.kill()
-                self.pump_thread = None
-            stop(self.port)
+        self.mpc.threaded_stop()
 
+    # NIDevice
     def refresh_ni_system(self):
-        [self.ni_device_combobox.removeItem(i) for i in list(range(len(self.ni_system_devices)))]
-        self.ni_system_devices = get_ni_system_devices_str()
-        self.ni_device_combobox.addItems(self.ni_system_devices)
-        self.ni_device_combobox.setCurrentText(self.ni_system_devices[0])
+        [self.ni_device_combobox.removeItem(i) for i in list(range(len(self.ndc.available_devices_str)))]
+        self.ndc.update_ni_system_devices_str()
+        self.ni_device_combobox.addItems(self.ndc.available_devices_str)
+        self.ni_device_combobox.setCurrentText(self.ndc.available_devices_str[0])
+
+    def change_device(self):
+        val = self.ni_device_combobox.currentText()
+        if val != "no NI System detected" and val != "":
+            self.ndc.change_device_selection(val)
 
     def start_ni(self):
         if self.ni_device_thread:
@@ -242,25 +216,12 @@ class MainWindow(QMainWindow):
             self.ni_device_thread.shutdown()
             self.ni_device_thread = None
 
-    def thread_test_start_clicked(self):
-        if self.pump_thread:
-            print(f"Stop current thread: {self.pump_thread}")
-            self.pump_thread.kill()
-        self.pump_thread = Thread(target=test_start, args=[True])
-        self.pump_thread.start()
-
-    def thread_test_stop_clicked(self):
-        if self.pump_thread:
-            print(f"Stop current thread: {self.pump_thread}")
-            self.pump_thread.kill()
-            self.pump_thread = None
-
 
 #   create Application obj
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     #   Constructor GUI
-    gui = MainWindow(serial_ports(), get_ni_system_devices_str())
+    gui = MainWindow()
     #   execute Application
     gui.show()
     sys.exit(app.exec_())
