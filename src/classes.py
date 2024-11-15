@@ -2,6 +2,7 @@ import sys
 import glob
 import time
 import serial
+import numpy as np
 
 import threading
 
@@ -10,6 +11,7 @@ import nidaqmx.system
 import nidaqmx.system.device
 import nidaqmx.system._collections.device_collection
 from nidaqmx.constants import AcquisitionType, LoggingMode, LoggingOperation, READ_ALL_AVAILABLE
+from nidaqmx.stream_readers import AnalogMultiChannelReader, AnalogSingleChannelReader
 
 
 class Thread(threading.Thread):
@@ -57,6 +59,7 @@ class MicroPumpController:
         self.available_ports: None | list = None
         self.update_serial_ports()
         self.active_port: None | serial.Serial = None
+        self.change_port(self.available_ports[0])
         self.current_thread: None | Thread = None
 
     def update_serial_ports(self) -> None:
@@ -93,6 +96,7 @@ class MicroPumpController:
     def change_port(self, selection: str) -> None:
         if selection != "no port detected" and selection != "":
             self.active_port = serial.Serial(port=str(selection), baudrate=115200)
+            print(f"Current Serial Port: {self.active_port}")
 
     def start(self, amplitude: int | float) -> None:
         if self.active_port:
@@ -116,7 +120,7 @@ class MicroPumpController:
                      injection_number: int,
                      injection_distance: int | float) -> None:
         for _ in range(0, injection_number):
-            print(f"Injection {_} of {injection_number}:")
+            print(f"Injection {_+1} of {injection_number}:")
             self.pulse(amplitude=amplitude, injection_time=injection_time)
             print(f"Pause for {injection_distance}[sec]")
             time.sleep(injection_distance)
@@ -128,21 +132,21 @@ class MicroPumpController:
         if not self.current_thread:
             if injection_time == 0:
                 self.current_thread = Thread(target=self.start, args=[amplitude])
-                self.current_thread.start()
                 print(f"Start current thread: {self.current_thread}")
+                self.current_thread.start()
             else:
                 if injection_number != 0 and injection_distance != 0:
                     self.current_thread = Thread(target=self.pulse_series, args=[amplitude,
                                                                                  injection_time,
                                                                                  injection_number,
-                                                                                 injection_distance])
-                    self.current_thread.start()
+                                                                                injection_distance])
                     print(f"Start current thread: {self.current_thread}")
+                    self.current_thread.start()
                 else:
                     self.current_thread = Thread(target=self.pulse, args=[amplitude,
                                                                           injection_time])
-                    self.current_thread.start()
                     print(f"Start current thread: {self.current_thread}")
+                    self.current_thread.start()
 
     def threaded_stop(self) -> None:
         if self.current_thread:
@@ -158,6 +162,7 @@ class NIDeviceController:
         self.available_devices_str: None | list[str] = None
         self.update_ni_system_devices_str()
         self.active_device_str: None | str = None
+        self.change_device_selection(self.available_devices_str[0])
         self.current_thread: None | Thread = None
 
     def update_ni_system_devices_str(self) -> None:
@@ -170,13 +175,30 @@ class NIDeviceController:
 
     def change_device_selection(self, selection: str) -> None:
         self.active_device_str = ''.join(selection.split("=")[1].split(")")[0])
+        print(f"Current NI Device: {self.active_device_str}")
 
     def get_ni_system_signal(self, physical_chanel: str):
         if self.active_device_str:
-            with nidaqmx.Task() as task:
-                task.ai_channels.add_ai_voltage_chan(f"{self.active_device_str}/{physical_chanel}")
-                task.timing.cfg_samp_clk_timing(1000.0, sample_mode=AcquisitionType.CONTINUOUS, samps_per_chan=10)
-                task.in_stream.configure_logging("TestData.tdms", LoggingMode.LOG_AND_READ,
-                                                 operation=LoggingOperation.CREATE_OR_REPLACE)
-                data = task.read(READ_ALL_AVAILABLE)
-        return data
+            with nidaqmx.Task() as read_task:
+                read_task.ai_channels.add_ai_voltage_chan(f"{self.active_device_str}/{physical_chanel}")
+                read_task.timing.cfg_samp_clk_timing(1000.0,
+                                                sample_mode=AcquisitionType.CONTINUOUS,
+                                                samps_per_chan=10)
+                reader = AnalogSingleChannelReader(read_task.in_stream)
+                output = np.zeros([10])
+                read_task.start()
+                while True:
+                    reader.read_many_sample(data=output, number_of_samples_per_channel=10)
+                    output = np.around(output, 2)
+                    time.sleep(0.1)
+
+                    return output
+                #[-1.4  -1.4  -1.4  -1.4  -1.4  -1.4  -1.39 -1.39 -1.39 -1.39]
+                #[-1.4  -1.4  -1.4  -1.4  -1.39 -1.39 -1.39 -1.39 -1.39 -1.38]
+                #[-1.38 -1.39 -1.38 -1.38 -1.38 -1.38 -1.39 -1.4  -1.4  -1.41]
+                #[-1.41 -1.41 -1.4  -1.39 -1.39 -1.38 -1.38 -1.38 -1.38 -1.38]
+
+                #read_task.in_stream.configure_logging("TestData.tdms",
+                #                                 LoggingMode.LOG_AND_READ,
+                #                                 operation=LoggingOperation.CREATE_OR_REPLACE)
+                #data = read_task.read(READ_ALL_AVAILABLE)

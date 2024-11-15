@@ -200,21 +200,15 @@ class MainWindow(QMainWindow):
             self.ndc.change_device_selection(val)
 
     def start_ni(self):
-        if self.ni_device_thread:
-            print(f"Stop current thread: {self.ni_device_thread}")
-            self.ni_device_thread.shutdown()
         with concurrent.futures.ThreadPoolExecutor() as executor:
-            future = executor.submit(get_ni_system_signal,
-                                     self.ni_device_name_lineedit.text(),
+            future = executor.submit(self.ndc.get_ni_system_signal,
                                      self.ni_device_channel_lineedit.text())
             data = future.result()
-            self.scope_ai.plot(data)
+            print(data)
+            #self.scope_ai.plot(data)
 
     def stop_ni(self):
-        if self.ni_device_thread:
-            print(f"Stop current thread: {self.ni_device_thread}")
-            self.ni_device_thread.shutdown()
-            self.ni_device_thread = None
+        return
 
 
 #   create Application obj
