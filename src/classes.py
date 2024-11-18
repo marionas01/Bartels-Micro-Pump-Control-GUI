@@ -2,9 +2,11 @@ import sys
 import glob
 import time
 import serial
+import traceback
 import numpy as np
 
 import threading
+from PyQt5.QtCore import *
 
 import nidaqmx
 import nidaqmx.system
@@ -139,7 +141,7 @@ class MicroPumpController:
                     self.current_thread = Thread(target=self.pulse_series, args=[amplitude,
                                                                                  injection_time,
                                                                                  injection_number,
-                                                                                injection_distance])
+                                                                                 injection_distance])
                     print(f"Start current thread: {self.current_thread}")
                     self.current_thread.start()
                 else:
@@ -159,6 +161,7 @@ class MicroPumpController:
 class NIDeviceController:
 
     def __init__(self) -> None:
+
         self.available_devices_str: None | list[str] = None
         self.update_ni_system_devices_str()
         self.active_device_str: None | str = None
@@ -174,22 +177,23 @@ class NIDeviceController:
             self.available_devices_str = result
 
     def change_device_selection(self, selection: str) -> None:
-        self.active_device_str = ''.join(selection.split("=")[1].split(")")[0])
-        print(f"Current NI Device: {self.active_device_str}")
+        if selection != "no NI System detected":
+            self.active_device_str = ''.join(selection.split("=")[1].split(")")[0])
+            print(f"Current NI Device: {self.active_device_str}")
 
     def get_ni_system_signal(self, physical_chanel: str):
         if self.active_device_str:
             with nidaqmx.Task() as read_task:
                 read_task.ai_channels.add_ai_voltage_chan(f"{self.active_device_str}/{physical_chanel}")
                 read_task.timing.cfg_samp_clk_timing(1000.0,
-                                                sample_mode=AcquisitionType.CONTINUOUS,
-                                                samps_per_chan=10)
+                                                     sample_mode=AcquisitionType.CONTINUOUS,
+                                                     samps_per_chan=10)
                 reader = AnalogSingleChannelReader(read_task.in_stream)
                 output = np.zeros([10])
                 read_task.start()
                 while True:
                     reader.read_many_sample(data=output, number_of_samples_per_channel=10)
-                    output = np.around(output, 2)
+                    output = np.around(output, 8)
                     time.sleep(0.1)
 
                     return output
@@ -202,3 +206,40 @@ class NIDeviceController:
                 #                                 LoggingMode.LOG_AND_READ,
                 #                                 operation=LoggingOperation.CREATE_OR_REPLACE)
                 #data = read_task.read(READ_ALL_AVAILABLE)
+
+
+class WorkerSignals(QObject):
+
+    finished = pyqtSignal()
+    error = pyqtSignal(tuple)
+    result = pyqtSignal(object)
+    progress = pyqtSignal(int)
+
+
+class Worker(QRunnable):
+    def __init__(self, fn, *args, **kwargs):
+        super().__init__()
+
+        # Store constructor arguments (re-used for processing)
+        self.fn = fn
+        self.args = args
+        self.kwargs = kwargs
+        self.signals = WorkerSignals()
+
+        # Add the callback to our kwargs
+        self.kwargs['progress_callback'] = self.signals.progress
+
+    @pyqtSlot()
+    def run(self):
+
+        # Retrieve args/kwargs here; and fire processing using them
+        try:
+            result = self.fn(*self.args, **self.kwargs)
+        except:
+            traceback.print_exc()
+            exctype, value = sys.exc_info()[:2]
+            self.signals.error.emit((exctype, value, traceback.format_exc()))
+        else:
+            self.signals.result.emit(result)  # Return the result of the processing
+        finally:
+            self.signals.finished.emit()  # Done
