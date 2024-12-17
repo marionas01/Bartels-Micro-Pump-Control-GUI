@@ -38,7 +38,7 @@ class MainWindow(QMainWindow):
         self.left_widget: QWidget = QWidget()
         self.left_layout: QGridLayout = QGridLayout()
 
-        # General Setting
+        # General Settings
         self.port_button: QPushButton = QPushButton(QIcon(os.path.join(basedir, "icons", "arrow-circle-double.png")),
                                                     '&refresh Ports',
                                                     self)
@@ -47,6 +47,10 @@ class MainWindow(QMainWindow):
         self.port_combobox.addItems(self.mpc.available_ports)
         self.port_combobox.setCurrentText(self.mpc.available_ports[0])
         self.port_combobox.currentTextChanged.connect(self.change_port)
+
+        self.txt_file_label: QLabel = QLabel("Time Stamp File Name:")
+        self.txt_file_lineedit: QLineEdit = QLineEdit()
+        self.txt_file_lineedit.setPlaceholderText("enter file name")
 
         self.voltage_label: QLabel = QLabel("Pump Voltage [Volt]:")
         self.voltage_spinbox: QDoubleSpinBox = QDoubleSpinBox()
@@ -105,21 +109,23 @@ class MainWindow(QMainWindow):
 
         self.left_layout.addWidget(self.port_button, 0, 0)
         self.left_layout.addWidget(self.port_combobox, 0, 1)
-        self.left_layout.addWidget(self.voltage_label, 1, 0)
-        self.left_layout.addWidget(self.voltage_spinbox, 1, 1)
-        self.left_layout.addWidget(self.injection_time_label, 2, 0)
-        self.left_layout.addWidget(self.injection_time_spinbox, 2, 1)
-        self.left_layout.addWidget(self.injection_number_label, 3, 0)
-        self.left_layout.addWidget(self.injection_number_spinbox, 3, 1)
-        self.left_layout.addWidget(self.injection_distance_label, 4, 0)
-        self.left_layout.addWidget(self.injection_distance_spinbox, 4, 1)
-        self.left_layout.addWidget(self.start_button, 5, 0)
-        self.left_layout.addWidget(self.stop_button, 5, 1)
-        self.left_layout.addWidget(self.ni_device_button, 6, 0)
-        self.left_layout.addWidget(self.ni_device_combobox, 6, 1)
-        self.left_layout.addWidget(self.ni_device_channel_lineedit, 7, 1)
-        self.left_layout.addWidget(self.ni_device_start_button, 8, 0)
-        self.left_layout.addWidget(self.ni_device_stop_button, 8, 1)
+        self.left_layout.addWidget(self.txt_file_label, 1, 0)
+        self.left_layout.addWidget(self.txt_file_lineedit, 1, 1)
+        self.left_layout.addWidget(self.voltage_label, 2, 0)
+        self.left_layout.addWidget(self.voltage_spinbox, 2, 1)
+        self.left_layout.addWidget(self.injection_time_label, 3, 0)
+        self.left_layout.addWidget(self.injection_time_spinbox, 3, 1)
+        self.left_layout.addWidget(self.injection_number_label, 4, 0)
+        self.left_layout.addWidget(self.injection_number_spinbox, 4, 1)
+        self.left_layout.addWidget(self.injection_distance_label, 5, 0)
+        self.left_layout.addWidget(self.injection_distance_spinbox, 5, 1)
+        self.left_layout.addWidget(self.start_button, 6, 0)
+        self.left_layout.addWidget(self.stop_button, 6, 1)
+        self.left_layout.addWidget(self.ni_device_button, 7, 0)
+        self.left_layout.addWidget(self.ni_device_combobox, 7, 1)
+        self.left_layout.addWidget(self.ni_device_channel_lineedit, 8, 1)
+        self.left_layout.addWidget(self.ni_device_start_button, 9, 0)
+        self.left_layout.addWidget(self.ni_device_stop_button, 9, 1)
 
         # # Threading Test Buttons
         # self.test_start_button: QPushButton = QPushButton("Test Start")
@@ -156,7 +162,7 @@ class MainWindow(QMainWindow):
         self.main_widget: QWidget = QWidget()
         self.main_layout: QHBoxLayout = QHBoxLayout()
         self.main_layout.addWidget(self.left_widget, stretch=1)
-        self.main_layout.addWidget(self.right_widget, stretch=3)
+        # self.main_layout.addWidget(self.right_widget, stretch=3)
 
         self.main_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.main_widget)
@@ -164,7 +170,7 @@ class MainWindow(QMainWindow):
     #   Methods:
     # MicroPump
     def set_window_size(self):
-        self.setGeometry(0, 0, 600, 300)
+        self.setGeometry(0, 0, 250, 350)
         # self.setMaximumSize(200, 250)
 
     def refresh_ports(self):
@@ -182,7 +188,8 @@ class MainWindow(QMainWindow):
         self.mpc.threaded_start(amplitude=self.voltage_spinbox.value(),
                                 injection_time=self.injection_time_spinbox.value(),
                                 injection_number=self.injection_number_spinbox.value(),
-                                injection_distance=self.injection_distance_spinbox.value())
+                                injection_distance=self.injection_distance_spinbox.value(),
+                                file_name=self.txt_file_lineedit.text())
 
     def stop_clicked(self):
         self.mpc.threaded_stop()

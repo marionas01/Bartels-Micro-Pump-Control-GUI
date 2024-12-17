@@ -100,11 +100,15 @@ class MicroPumpController:
             self.active_port = serial.Serial(port=str(selection), baudrate=115200)
             print(f"Current Serial Port: {self.active_port}")
 
-    def start(self, amplitude: int | float) -> None:
+    def start(self, amplitude: int | float) -> float:
         if self.active_port:
             command = f"1:" + str(amplitude) + "\n"
             self.active_port.write(command.encode())
+            timestamp = time.time()
+            print(f'Injection timestamp: {timestamp}')
             print("start command send:", command)
+
+            return timestamp
 
     def stop(self) -> None:
         if self.active_port:
@@ -112,25 +116,31 @@ class MicroPumpController:
             self.active_port.write(command.encode())
             print("stop command send:", command)
 
-    def pulse(self, amplitude: int | float, injection_time: int | float) -> None:
-        self.start(amplitude=amplitude)
+    def pulse(self, amplitude: int | float, injection_time: int | float, file_name: None | str = None) -> None:
+        timestamp = self.start(amplitude=amplitude)
+        if file_name is not None:
+            file = open(f'{file_name}.txt', "a")
+            file.write(f'Injection timestamp: {timestamp}, Amplitude: {amplitude}[V], Duration: {injection_time}[s]\n')
+            file.close()
         time.sleep(injection_time)
         self.stop()
 
     def pulse_series(self, amplitude: int | float,
                      injection_time: int | float,
                      injection_number: int,
-                     injection_distance: int | float) -> None:
+                     injection_distance: int | float,
+                     file_name: None | str = None) -> None:
         for _ in range(0, injection_number):
             print(f"Injection {_+1} of {injection_number}:")
-            self.pulse(amplitude=amplitude, injection_time=injection_time)
+            self.pulse(amplitude=amplitude, injection_time=injection_time, file_name=file_name)
             print(f"Pause for {injection_distance}[sec]")
             time.sleep(injection_distance)
 
     def threaded_start(self, amplitude: int | float,
                        injection_time: int | float,
                        injection_number: int,
-                       injection_distance: int | float) -> None:
+                       injection_distance: int | float,
+                       file_name: None | str = None) -> None:
         if not self.current_thread:
             if injection_time == 0:
                 self.current_thread = Thread(target=self.start, args=[amplitude])
@@ -141,12 +151,14 @@ class MicroPumpController:
                     self.current_thread = Thread(target=self.pulse_series, args=[amplitude,
                                                                                  injection_time,
                                                                                  injection_number,
-                                                                                 injection_distance])
+                                                                                 injection_distance,
+                                                                                 file_name])
                     print(f"Start current thread: {self.current_thread}")
                     self.current_thread.start()
                 else:
                     self.current_thread = Thread(target=self.pulse, args=[amplitude,
-                                                                          injection_time])
+                                                                          injection_time,
+                                                                          file_name])
                     print(f"Start current thread: {self.current_thread}")
                     self.current_thread.start()
 
