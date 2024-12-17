@@ -48,7 +48,7 @@ class MainWindow(QMainWindow):
         self.port_combobox.setCurrentText(self.mpc.available_ports[0])
         self.port_combobox.currentTextChanged.connect(self.change_port)
 
-        self.txt_file_label: QLabel = QLabel("Time Stamp File Name:")
+        self.txt_file_label: QLabel = QLabel("Timestamp file name:")
         self.txt_file_lineedit: QLineEdit = QLineEdit()
         self.txt_file_lineedit.setPlaceholderText("enter file name")
 
