@@ -118,7 +118,7 @@ class MicroPumpController:
 
     def pulse(self, amplitude: int | float, injection_time: int | float, file_name: None | str = None) -> None:
         timestamp = self.start(amplitude=amplitude)
-        if file_name is not None:
+        if file_name is not None or file_name != "":
             file = open(f'{file_name}.txt', "a")
             file.write(f'Injection timestamp: {timestamp}, Amplitude: {amplitude}[V], Duration: {injection_time}[s]\n')
             file.close()
