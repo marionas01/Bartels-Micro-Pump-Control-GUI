@@ -31,7 +31,8 @@ class MainWindow(QMainWindow):
 
         #   Controller Constructor:
         self.mpc = MicroPumpController()
-        self.ndc = NIDeviceController()
+        if not sys.platform.startswith('darwin'):
+            self.ndc = NIDeviceController()
 
         #   Layouts:
         # Left Layout:
@@ -84,29 +85,31 @@ class MainWindow(QMainWindow):
         self.stop_button.clicked.connect(self.stop_clicked)
 
         # NIDaq Settings
-        self.ni_device_button: QPushButton = QPushButton(QIcon(os.path.join(basedir, "icons", "arrow-circle-double.png")),
-                                                         '&refresh NI System',
-                                                         self)
-        self.ni_device_button.clicked.connect(self.refresh_ni_system)
-        self.ni_device_combobox: QComboBox = QComboBox()
-        self.ni_device_combobox.addItems(self.ndc.available_devices_str)
-        self.ni_device_combobox.setCurrentText(self.ndc.available_devices_str[0])
-        self.ni_device_combobox.currentTextChanged.connect(self.change_device)
+        if not sys.platform.startswith('darwin'):
+            self.ni_device_button: QPushButton = QPushButton(QIcon(os.path.join(basedir, "icons", "arrow-circle-double.png")),
+                                                             '&refresh NI System',
+                                                             self)
+            self.ni_device_button.clicked.connect(self.refresh_ni_system)
+            self.ni_device_combobox: QComboBox = QComboBox()
+            self.ni_device_combobox.addItems(self.ndc.available_devices_str)
+            self.ni_device_combobox.setCurrentText(self.ndc.available_devices_str[0])
+            self.ni_device_combobox.currentTextChanged.connect(self.change_device)
 
-        self.ni_device_channel_lineedit: QLineEdit = QLineEdit()
-        self.ni_device_channel_lineedit.setPlaceholderText("Enter Channel Name:")
+            self.ni_device_channel_lineedit: QLineEdit = QLineEdit()
+            self.ni_device_channel_lineedit.setPlaceholderText("Enter Channel Name:")
 
-        self.ni_device_start_button: QPushButton = QPushButton(QIcon(os.path.join(basedir,
-                                                                                  "icons", "control.png")),
-                                                               '&Start',
-                                                               self)
-        self.ni_device_start_button.clicked.connect(self.start_ni)
-        self.ni_device_stop_button: QPushButton = QPushButton(QIcon(os.path.join(basedir,
-                                                                                 "icons", "control-stop-square.png")),
-                                                              '&Stop',
-                                                              self)
-        self.ni_device_stop_button.clicked.connect(self.stop_ni)
+            self.ni_device_start_button: QPushButton = QPushButton(QIcon(os.path.join(basedir,
+                                                                                      "icons", "control.png")),
+                                                                   '&Start',
+                                                                   self)
+            self.ni_device_start_button.clicked.connect(self.start_ni)
+            self.ni_device_stop_button: QPushButton = QPushButton(QIcon(os.path.join(basedir,
+                                                                                     "icons", "control-stop-square.png")),
+                                                                  '&Stop',
+                                                                  self)
+            self.ni_device_stop_button.clicked.connect(self.stop_ni)
 
+        #   Layout:
         self.left_layout.addWidget(self.port_button, 0, 0)
         self.left_layout.addWidget(self.port_combobox, 0, 1)
         self.left_layout.addWidget(self.txt_file_label, 1, 0)
@@ -121,11 +124,13 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.injection_distance_spinbox, 5, 1)
         self.left_layout.addWidget(self.start_button, 6, 0)
         self.left_layout.addWidget(self.stop_button, 6, 1)
-        self.left_layout.addWidget(self.ni_device_button, 7, 0)
-        self.left_layout.addWidget(self.ni_device_combobox, 7, 1)
-        self.left_layout.addWidget(self.ni_device_channel_lineedit, 8, 1)
-        self.left_layout.addWidget(self.ni_device_start_button, 9, 0)
-        self.left_layout.addWidget(self.ni_device_stop_button, 9, 1)
+
+        if not sys.platform.startswith('darwin'):
+            self.left_layout.addWidget(self.ni_device_button, 8, 0)
+            self.left_layout.addWidget(self.ni_device_combobox, 8, 1)
+            self.left_layout.addWidget(self.ni_device_channel_lineedit, 9, 1)
+            self.left_layout.addWidget(self.ni_device_start_button, 10, 0)
+            self.left_layout.addWidget(self.ni_device_stop_button, 10, 1)
 
         # # Threading Test Buttons
         # self.test_start_button: QPushButton = QPushButton("Test Start")

@@ -173,12 +173,12 @@ class MicroPumpController:
 class NIDeviceController:
 
     def __init__(self) -> None:
-
-        self.available_devices_str: None | list[str] = None
-        self.update_ni_system_devices_str()
-        self.active_device_str: None | str = None
-        self.change_device_selection(self.available_devices_str[0])
-        self.current_thread: None | Thread = None
+        if not sys.platform.startswith('darwin'):
+            self.available_devices_str: None | list[str] = None
+            self.update_ni_system_devices_str()
+            self.active_device_str: None | str = None
+            self.change_device_selection(self.available_devices_str[0])
+            self.current_thread: None | Thread = None
 
     def update_ni_system_devices_str(self) -> None:
         system = nidaqmx.system.System.local()
