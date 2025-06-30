@@ -53,13 +53,13 @@ class MainWindow(QMainWindow):
         self.txt_file_lineedit: QLineEdit = QLineEdit()
         self.txt_file_lineedit.setPlaceholderText("enter file name")
 
-        self.voltage_label: QLabel = QLabel("Pump Voltage [Volt]:")
+        self.voltage_label: QLabel = QLabel("Pump Voltage [V]:")
         self.voltage_spinbox: QDoubleSpinBox = QDoubleSpinBox()
         self.voltage_spinbox.setRange(0, 250)
         self.voltage_spinbox.setValue(0)
 
         # Impulse Settings
-        self.injection_time_label: QLabel = QLabel("Injection Time [sec]:")
+        self.injection_time_label: QLabel = QLabel("Injection Time [s]:")
         self.injection_time_spinbox: QDoubleSpinBox = QDoubleSpinBox()
         self.injection_time_spinbox.setRange(0, 10000)
         self.injection_time_spinbox.setValue(0)
@@ -71,7 +71,7 @@ class MainWindow(QMainWindow):
         self.injection_number_spinbox.setValue(0)
         self.injection_number_spinbox.setDisabled(True)
 
-        self.injection_distance_label: QLabel = QLabel("Injection Distance [sec]:")
+        self.injection_distance_label: QLabel = QLabel("Injection Distance [s]:")
         self.injection_distance_spinbox: QDoubleSpinBox = QDoubleSpinBox()
         self.injection_distance_spinbox.setRange(0, 10000)
         self.injection_distance_spinbox.setValue(0)
