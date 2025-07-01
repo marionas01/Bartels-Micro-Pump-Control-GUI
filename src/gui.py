@@ -67,8 +67,8 @@ class MainWindow(QMainWindow):
 
         self.injection_number_label: QLabel = QLabel("Number of Injections:")
         self.injection_number_spinbox: QSpinBox = QSpinBox()
-        self.injection_number_spinbox.setRange(0, 10000)
-        self.injection_number_spinbox.setValue(0)
+        self.injection_number_spinbox.setRange(1, 10000)
+        self.injection_number_spinbox.setValue(1)
         self.injection_number_spinbox.setDisabled(True)
 
         self.injection_distance_label: QLabel = QLabel("Injection Distance [s]:")
@@ -86,6 +86,14 @@ class MainWindow(QMainWindow):
                                                     '&Stop',
                                                     self)
         self.stop_button.clicked.connect(self.stop_clicked)
+
+        self.h_line1: QFrame = QFrame()
+        self.h_line1.setFrameShape(QFrame.HLine)
+        self.h_line1.setLineWidth(1)
+
+        self.h_line2: QFrame = QFrame()
+        self.h_line2.setFrameShape(QFrame.HLine)
+        self.h_line2.setLineWidth(1)
 
         # NIDaq Settings
         if not sys.platform.startswith('darwin'):
@@ -129,6 +137,8 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.stop_button, 6, 1)
 
         if not sys.platform.startswith('darwin'):
+            self.left_layout.addWidget(self.h_line1, 7, 0)
+            self.left_layout.addWidget(self.h_line2, 7, 1)
             self.left_layout.addWidget(self.ni_device_button, 8, 0)
             self.left_layout.addWidget(self.ni_device_combobox, 8, 1)
             self.left_layout.addWidget(self.ni_device_channel_lineedit, 9, 1)

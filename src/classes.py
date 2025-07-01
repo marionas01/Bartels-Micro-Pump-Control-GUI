@@ -146,21 +146,20 @@ class MicroPumpController:
                 self.current_thread = Thread(target=self.start, args=[amplitude])
                 print(f"Start current thread: {self.current_thread}")
                 self.current_thread.start()
+            elif injection_number != 0:
+                self.current_thread = Thread(target=self.pulse_series, args=[amplitude,
+                                                                             injection_time,
+                                                                             injection_number,
+                                                                             injection_distance,
+                                                                             file_name])
+                print(f"Start current thread: {self.current_thread}")
+                self.current_thread.start()
             else:
-                if injection_number != 0 and injection_distance != 0:
-                    self.current_thread = Thread(target=self.pulse_series, args=[amplitude,
-                                                                                 injection_time,
-                                                                                 injection_number,
-                                                                                 injection_distance,
-                                                                                 file_name])
-                    print(f"Start current thread: {self.current_thread}")
-                    self.current_thread.start()
-                else:
-                    self.current_thread = Thread(target=self.pulse, args=[amplitude,
-                                                                          injection_time,
-                                                                          file_name])
-                    print(f"Start current thread: {self.current_thread}")
-                    self.current_thread.start()
+                self.current_thread = Thread(target=self.pulse, args=[amplitude,
+                                                                      injection_time,
+                                                                      file_name])
+                print(f"Start current thread: {self.current_thread}")
+                self.current_thread.start()
 
     def threaded_stop(self) -> None:
         if self.current_thread:
