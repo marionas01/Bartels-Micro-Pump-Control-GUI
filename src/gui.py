@@ -71,11 +71,11 @@ class MainWindow(QMainWindow):
         self.injection_number_spinbox.setValue(1)
         self.injection_number_spinbox.setDisabled(True)
 
-        self.injection_distance_label: QLabel = QLabel("Injection Distance [s]:")
-        self.injection_distance_spinbox: QDoubleSpinBox = QDoubleSpinBox()
-        self.injection_distance_spinbox.setRange(0, 10000)
-        self.injection_distance_spinbox.setValue(0)
-        self.injection_distance_spinbox.setDisabled(True)
+        self.injection_interval_label: QLabel = QLabel("Injection Interval [s]:")
+        self.injection_interval_spinbox: QDoubleSpinBox = QDoubleSpinBox()
+        self.injection_interval_spinbox.setRange(0, 10000)
+        self.injection_interval_spinbox.setValue(0)
+        self.injection_interval_spinbox.setDisabled(True)
 
         self.start_button: QPushButton = QPushButton(QIcon(os.path.join(basedir, "icons", "control.png")),
                                                      '&Start',
@@ -131,8 +131,8 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.injection_time_spinbox, 3, 1)
         self.left_layout.addWidget(self.injection_number_label, 4, 0)
         self.left_layout.addWidget(self.injection_number_spinbox, 4, 1)
-        self.left_layout.addWidget(self.injection_distance_label, 5, 0)
-        self.left_layout.addWidget(self.injection_distance_spinbox, 5, 1)
+        self.left_layout.addWidget(self.injection_interval_label, 5, 0)
+        self.left_layout.addWidget(self.injection_interval_spinbox, 5, 1)
         self.left_layout.addWidget(self.start_button, 6, 0)
         self.left_layout.addWidget(self.stop_button, 6, 1)
 
@@ -190,10 +190,10 @@ class MainWindow(QMainWindow):
     def toggle_q_spin_boxes(self):
         if self.injection_time_spinbox.value()==0.0:
             self.injection_number_spinbox.setDisabled(True)
-            self.injection_distance_spinbox.setDisabled(True)
+            self.injection_interval_spinbox.setDisabled(True)
         else:
             self.injection_number_spinbox.setEnabled(True)
-            self.injection_distance_spinbox.setEnabled(True)
+            self.injection_interval_spinbox.setEnabled(True)
 
     # MicroPump
     def set_window_size(self):
@@ -215,7 +215,7 @@ class MainWindow(QMainWindow):
         self.mpc.threaded_start(amplitude=self.voltage_spinbox.value(),
                                 injection_time=self.injection_time_spinbox.value(),
                                 injection_number=self.injection_number_spinbox.value(),
-                                injection_distance=self.injection_distance_spinbox.value(),
+                                injection_interval=self.injection_interval_spinbox.value(),
                                 file_name=self.txt_file_lineedit.text())
 
     def stop_clicked(self):
