@@ -128,39 +128,38 @@ class MicroPumpController:
     def pulse_series(self, amplitude: int | float,
                      injection_time: int | float,
                      injection_number: int,
-                     injection_distance: int | float,
+                     injection_interval: int | float,
                      file_name: None | str = None) -> None:
         for _ in range(0, injection_number):
             print(f"Injection {_+1} of {injection_number}:")
             self.pulse(amplitude=amplitude, injection_time=injection_time, file_name=file_name)
-            print(f"Pause for {injection_distance}[sec]")
-            time.sleep(injection_distance)
+            print(f"Pause for {injection_interval}[sec]")
+            time.sleep(injection_interval)
 
     def threaded_start(self, amplitude: int | float,
                        injection_time: int | float,
                        injection_number: int,
-                       injection_distance: int | float,
+                       injection_interval: int | float,
                        file_name: None | str = None) -> None:
         if not self.current_thread:
             if injection_time == 0:
                 self.current_thread = Thread(target=self.start, args=[amplitude])
                 print(f"Start current thread: {self.current_thread}")
                 self.current_thread.start()
+            elif injection_number != 0:
+                self.current_thread = Thread(target=self.pulse_series, args=[amplitude,
+                                                                             injection_time,
+                                                                             injection_number,
+                                                                             injection_interval,
+                                                                             file_name])
+                print(f"Start current thread: {self.current_thread}")
+                self.current_thread.start()
             else:
-                if injection_number != 0 and injection_distance != 0:
-                    self.current_thread = Thread(target=self.pulse_series, args=[amplitude,
-                                                                                 injection_time,
-                                                                                 injection_number,
-                                                                                 injection_distance,
-                                                                                 file_name])
-                    print(f"Start current thread: {self.current_thread}")
-                    self.current_thread.start()
-                else:
-                    self.current_thread = Thread(target=self.pulse, args=[amplitude,
-                                                                          injection_time,
-                                                                          file_name])
-                    print(f"Start current thread: {self.current_thread}")
-                    self.current_thread.start()
+                self.current_thread = Thread(target=self.pulse, args=[amplitude,
+                                                                      injection_time,
+                                                                      file_name])
+                print(f"Start current thread: {self.current_thread}")
+                self.current_thread.start()
 
     def threaded_stop(self) -> None:
         if self.current_thread:
