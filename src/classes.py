@@ -1,6 +1,8 @@
 import sys
 import glob
 import time
+from threading import current_thread
+
 import serial
 import traceback
 import numpy as np
