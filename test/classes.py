@@ -80,6 +80,7 @@ class MicroPumpController:
         with self._port_lock:
             if self.active_port:
                 self.active_port.write(command.encode())
+                self.active_port.flush()        # push the bytes out now, not when the OS buffer decides
 
     def start(self, amplitude: int | float) -> float:
         command = f"1:{amplitude}\n"
@@ -143,20 +144,50 @@ class PumpWorker(QObject):
         self.injection_interval = injection_interval
         self.file_name = file_name
         self._stop_event = threading.Event()
+        # amplitude + on/off state are shared between the worker thread and the GUI thread
+        # (set_amplitude). The lock makes "switch on/off" and "change voltage" atomic, so a
+        # voltage change can never switch the pump back on right after the worker switched it off.
+        self._state_lock = threading.Lock()
+        self._is_on = False
 
     def stop(self) -> None:
         """Called DIRECTLY from the GUI thread (not via signal - the worker's event loop
         is busy inside run(), so a queued signal would never be delivered)."""
         self._stop_event.set()
 
-    def _pump_on(self) -> float:
-        timestamp = self.controller.start(amplitude=self.amplitude)
-        self.voltage_changed.emit(timestamp, float(self.amplitude))
-        return timestamp
+    def set_amplitude(self, amplitude: int | float) -> None:
+        """Called DIRECTLY from the GUI thread when the voltage spinbox changes.
+        Pump on  -> new voltage is sent to the pump immediately.
+        Pump off -> (pause between injections) the new voltage is used for the next injection."""
+        with self._state_lock:
+            if amplitude == self.amplitude:
+                return                          # nothing changed - don't spam the serial port
+            self.amplitude = amplitude
+            if not self._is_on:
+                return
+            timestamp = self.controller.start(amplitude=amplitude)
+            self.voltage_changed.emit(timestamp, float(amplitude))
+            self._log(f'Voltage change timestamp: {timestamp}, Amplitude: {amplitude}[V]\n')
+        self.status.emit(f"Voltage changed to {amplitude} V")
+
+    def _log(self, line: str) -> None:
+        if self.file_name:
+            with open(f'{self.file_name}.txt', "a") as file:
+                file.write(line)
+
+    def _pump_on(self) -> tuple[float, float]:
+        with self._state_lock:
+            amplitude = self.amplitude
+            timestamp = self.controller.start(amplitude=amplitude)
+            self._is_on = True
+            self.voltage_changed.emit(timestamp, float(amplitude))
+        return timestamp, amplitude
 
     def _pump_off(self) -> None:
-        timestamp = self.controller.stop()
-        self.voltage_changed.emit(timestamp, 0.0)
+        with self._state_lock:
+            timestamp = self.controller.stop()
+            self._is_on = False
+            self.voltage_changed.emit(timestamp, 0.0)
 
     @pyqtSlot()
     def run(self) -> None:
@@ -187,11 +218,9 @@ class PumpWorker(QObject):
 
     def _pulse(self) -> bool:
         """One injection. Returns True if it was interrupted by stop()."""
-        timestamp = self._pump_on()
-        if self.file_name:                                      # was: 'is not None or != ""' -> always True
-            with open(f'{self.file_name}.txt', "a") as file:
-                file.write(f'Injection timestamp: {timestamp}, Amplitude: {self.amplitude}[V], '
-                           f'Duration: {self.injection_time}[s]\n')
+        timestamp, amplitude = self._pump_on()
+        self._log(f'Injection timestamp: {timestamp}, Amplitude: {amplitude}[V], '
+                  f'Duration: {self.injection_time}[s]\n')
         # Event.wait() replaces time.sleep(): it returns immediately (True) when stop() is called
         interrupted = self._stop_event.wait(self.injection_time)
         self._pump_off()

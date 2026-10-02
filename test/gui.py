@@ -80,6 +80,10 @@ class MainWindow(QMainWindow):
         self.voltage_spinbox: QDoubleSpinBox = QDoubleSpinBox()
         self.voltage_spinbox.setRange(0, 250)
         self.voltage_spinbox.setValue(0)
+        # The new voltage is sent to the pump ONLY when Enter/Return is pressed in the spinbox.
+        # Typing (incomplete numbers), arrows, mouse wheel and focus loss only change the displayed value.
+        self.voltage_spinbox.setKeyboardTracking(False)
+        self.voltage_spinbox.lineEdit().returnPressed.connect(self.voltage_confirmed)
 
         # Impulse Settings
         self.injection_time_label: QLabel = QLabel("Injection Time [s]:")
@@ -92,6 +96,7 @@ class MainWindow(QMainWindow):
         self.injection_number_spinbox: QSpinBox = QSpinBox()
         self.injection_number_spinbox.setRange(1, 10000)
         self.injection_number_spinbox.setValue(1)
+        self.injection_number_spinbox.valueChanged.connect(self.toggle_q_spin_boxes)
         self.injection_number_spinbox.setDisabled(True)
 
         self.injection_interval_label: QLabel = QLabel("Injection Interval [s]:")
@@ -234,11 +239,13 @@ class MainWindow(QMainWindow):
             self.injection_interval_spinbox.setDisabled(True)
         else:
             self.injection_number_spinbox.setEnabled(True)
-            self.injection_interval_spinbox.setEnabled(True)
+            self.injection_interval_spinbox.setEnabled(False)
+            if self.injection_number_spinbox.value() > 1:
+                self.injection_interval_spinbox.setEnabled(True)
 
     # MicroPump
     def set_window_size(self):
-        self.setGeometry(0, 0, 700, 350)
+        self.setGeometry(0, 0, 1200, 400)
 
     def refresh_ports(self):
         self.port_combobox.blockSignals(True)
@@ -257,6 +264,7 @@ class MainWindow(QMainWindow):
     def start_clicked(self):
         if self.pump_thread is not None:
             return
+        self.reset_pump_plot()                      # every run starts with an empty plot
         self.pump_worker = PumpWorker(controller=self.mpc,
                                       amplitude=self.voltage_spinbox.value(),
                                       injection_time=self.injection_time_spinbox.value(),
@@ -273,6 +281,11 @@ class MainWindow(QMainWindow):
         self.stop_button.setEnabled(True)
         self.port_button.setEnabled(False)          # don't change the port while the pump runs
         self.port_combobox.setEnabled(False)
+
+    def voltage_confirmed(self):
+        """Enter pressed in the voltage spinbox -> forward the value to the running pump worker (if any)."""
+        if self.pump_worker is not None:
+            self.pump_worker.set_amplitude(self.voltage_spinbox.value())   # direct call, like stop()
 
     def stop_clicked(self):
         if self.pump_worker is not None:
@@ -291,6 +304,14 @@ class MainWindow(QMainWindow):
         self.port_combobox.setEnabled(True)
 
     # Pump plot
+    def reset_pump_plot(self):
+        """Clear all data of the previous run and let the view rescale for the new one."""
+        self.pump_t.clear()
+        self.pump_v.clear()
+        self.pump_level = 0.0
+        self.pump_curve.setData([], [])
+        self.scope_pump.enableAutoRange()          # undo any zoom/pan from the last run
+
     def on_pump_voltage_changed(self, timestamp: float, voltage: float):
         """Slot - runs in the GUI thread for every start/stop command the worker sends.
         Two points per change (old level, new level) at the same time give a square wave."""
